@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GymbroStat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0a;
+  --bg-alt:#121212;
+  --surface:#161616;
+  --surface-2:#1d1d1a;
+  --line:#2c2c28;
+  --ink:#f3f1e7;
+  --ink-dim:#a6a49a;
+  --yellow:#f4c40f;
+  --yellow-dim:#8a7413;
+  --red:#e0503a;
+  --green:#5fae6c;
+  --radius:2px;
+}
+:root:not([data-theme="light"]){ }
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#0a0a0a; --ink:#f3f1e7;
+  }
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{background:var(--bg); color:var(--ink); min-height:100%;}
+body{
+  font-family:'Kanit', sans-serif; font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+}
+.mono{font-family:'JetBrains Mono', monospace;}
+a{color:inherit;}
+button{font-family:inherit; cursor:pointer;}
+input,select{font-family:inherit;}
+::-webkit-scrollbar{width:8px; height:8px;}
+::-webkit-scrollbar-thumb{background:var(--line);}
+::-webkit-scrollbar-track{background:transparent;}
+
+/* ---------- layout shell ---------- */
+#app{min-height:100vh; display:flex; flex-direction:column;}
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 22px; border-bottom:1px solid var(--line);
+  position:sticky; top:0; background:var(--bg); z-index:40;
+}
+.brand{
+  font-weight:800; font-size:20px; letter-spacing:0.5px; display:flex; align-items:baseline; gap:6px;
+}
+.brand .dot{color:var(--yellow);}
+.topbar-right{display:flex; align-items:center; gap:14px;}
+.rank-chip{
+  display:flex; align-items:center; gap:8px; padding:6px 12px;
+  border:1px solid var(--line); font-size:13px; color:var(--ink-dim);
+}
+.rank-chip b{color:var(--yellow); font-weight:600;}
+.logout-btn{
+  background:transparent; border:1px solid var(--line); color:var(--ink-dim);
+  padding:7px 12px; font-size:13px; transition:border-color .15s, color .15s;
+}
+.logout-btn:hover{border-color:var(--yellow); color:var(--yellow);}
+
+.shell{display:flex; flex:1; min-height:0;}
+.sidenav{
+  width:210px; flex-shrink:0; border-right:1px solid var(--line);
+  padding:18px 0; display:flex; flex-direction:column; gap:2px;
+}
+.navbtn{
+  background:transparent; border:none; color:var(--ink-dim); text-align:left;
+  padding:12px 22px; font-size:15px; font-weight:500; border-left:3px solid transparent;
+  display:flex; align-items:center; gap:10px;
+}
+.navbtn:hover{color:var(--ink); background:var(--surface);}
+.navbtn.active{color:var(--yellow); border-left-color:var(--yellow); background:var(--surface);}
+.main{flex:1; min-width:0; padding:26px 30px 90px; overflow-y:auto;}
+
+.bottomnav{display:none;}
+@media (max-width:860px){
+  .sidenav{display:none;}
+  .bottomnav{
+    display:flex; position:fixed; bottom:0; left:0; right:0; background:var(--bg);
+    border-top:1px solid var(--line); z-index:40;
+  }
+  .bottomnav button{
+    flex:1; background:transparent; border:none; color:var(--ink-dim); font-size:11px;
+    padding:9px 2px 10px; display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  .bottomnav button.active{color:var(--yellow);}
+  .main{padding:20px 16px 90px;}
+  .topbar{padding:14px 16px;}
+}
+
+.icon{width:18px; height:18px; display:inline-block; flex-shrink:0;}
+
+/* ---------- common bits ---------- */
+h1.page-title{font-size:26px; font-weight:700; margin-bottom:4px;}
+.page-sub{color:var(--ink-dim); font-size:14px; margin-bottom:22px;}
+.card{
+  background:var(--surface); border:1px solid var(--line); padding:20px;
+}
+.card + .card{margin-top:14px;}
+.section-label{
+  font-size:12px; color:var(--yellow); font-weight:600; letter-spacing:.3px; margin-bottom:10px;
+}
+.btn{
+  background:var(--yellow); color:#111; border:none; padding:11px 18px; font-weight:600;
+  font-size:14px; letter-spacing:.2px; transition:transform .08s, background .15s;
+}
+.btn:hover{background:#ffd23d;}
+.btn:active{transform:scale(0.98);}
+.btn.secondary{background:transparent; color:var(--ink); border:1px solid var(--line);}
+.btn.secondary:hover{border-color:var(--yellow); color:var(--yellow);}
+.btn.danger{background:transparent; color:var(--red); border:1px solid var(--red);}
+.btn:disabled{opacity:.35; cursor:not-allowed;}
+.btn.block{width:100%;}
+.field{margin-bottom:14px;}
+.field label{display:block; font-size:12.5px; color:var(--ink-dim); margin-bottom:6px;}
+.field input, .field select{
+  width:100%; background:var(--bg-alt); border:1px solid var(--line); color:var(--ink);
+  padding:10px 12px; font-size:14px; outline:none;
+}
+.field input:focus, .field select:focus{border-color:var(--yellow);}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+.grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;}
+@media (max-width:600px){.grid2,.grid3{grid-template-columns:1fr;}}
+.row{display:flex; gap:10px; align-items:center;}
+.tag{
+  display:inline-block; font-size:11px; padding:3px 9px; border:1px solid var(--line); color:var(--ink-dim);
+}
+.tag.on{border-color:var(--yellow); color:var(--yellow);}
+.badge{padding:2px 8px; font-size:11px; font-weight:600; border:1px solid currentColor;}
+.badge.green{color:var(--green);}
+.badge.red{color:var(--red);}
+.empty{color:var(--ink-dim); font-size:14px; padding:24px 0; text-align:center; border:1px dashed var(--line);}
+.divider{height:1px; background:var(--line); margin:18px 0;}
+.toast{
+  position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+  background:var(--yellow); color:#111; padding:11px 20px; font-weight:600; font-size:14px;
+  z-index:100; box-shadow:0 6px 20px rgba(0,0,0,.5); animation:toastin .2s ease;
+}
+@keyframes toastin{from{opacity:0; transform:translate(-50%,10px);} to{opacity:1; transform:translate(-50%,0);}}
+
+/* ---------- auth screens ---------- */
+.auth-wrap{
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  position:relative; overflow:hidden;
+}
+.auth-wrap::before{
+  content:""; position:absolute; inset:0;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(244,196,15,0.07), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(244,196,15,0.05), transparent 40%);
+  pointer-events:none;
+}
+.auth-box{width:380px; max-width:100%; position:relative; z-index:1;}
+.auth-logo{font-size:34px; font-weight:800; margin-bottom:6px; letter-spacing:.3px;}
+.auth-logo .dot{color:var(--yellow);}
+.auth-tag{color:var(--ink-dim); font-size:14px; margin-bottom:30px;}
+.auth-tabs{display:flex; border-bottom:1px solid var(--line); margin-bottom:24px;}
+.auth-tabs button{
+  flex:1; background:none; border:none; color:var(--ink-dim); padding:10px 0; font-size:14px;
+  font-weight:600; border-bottom:2px solid transparent; margin-bottom:-1px;
+}
+.auth-tabs button.active{color:var(--yellow); border-bottom-color:var(--yellow);}
+.errmsg{color:var(--red); font-size:13px; margin:-4px 0 14px;}
+.plate-row{display:flex; gap:6px; margin-top:26px; opacity:.5;}
+.plate-row div{height:3px; flex:1; background:var(--line);}
+
+/* ---------- dashboard ---------- */
+.hero-card{
+  background:linear-gradient(135deg, #17170f, #0f0f0d); border:1px solid var(--line);
+  padding:26px; position:relative; overflow:hidden;
+}
+.hero-top{display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:18px;}
+.hero-rank{font-size:12px; color:var(--ink-dim); letter-spacing:.3px; margin-bottom:6px;}
+.hero-rankname{font-size:30px; font-weight:800; color:var(--yellow); line-height:1.1;}
+.xp-num{font-size:44px; font-weight:800; font-family:'JetBrains Mono',monospace;}
+.xp-label{font-size:12px; color:var(--ink-dim);}
+.xp-bar-wrap{margin-top:18px;}
+.xp-bar-track{height:10px; background:var(--bg-alt); border:1px solid var(--line); position:relative;}
+.xp-bar-fill{height:100%; background:var(--yellow); transition:width .4s ease;}
+.xp-bar-labels{display:flex; justify-content:space-between; font-size:11px; color:var(--ink-dim); margin-top:6px;}
+.stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:20px;}
+@media (max-width:700px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
+.stat-box{border:1px solid var(--line); padding:14px; background:var(--bg-alt);}
+.stat-box .v{font-size:22px; font-weight:700; font-family:'JetBrains Mono',monospace;}
+.stat-box .l{font-size:11.5px; color:var(--ink-dim); margin-top:3px;}
+.checkin-status{display:flex; align-items:center; gap:10px; margin-top:20px; padding:12px 14px; border:1px solid var(--line); background:var(--bg-alt);}
+.checkin-dot{width:9px; height:9px; border-radius:50%; background:var(--ink-dim); flex-shrink:0;}
+.checkin-dot.done{background:var(--green);}
+.week-strip{display:flex; gap:6px; margin-top:16px;}
+.week-day{flex:1; text-align:center; padding:8px 2px; border:1px solid var(--line); font-size:11px; color:var(--ink-dim);}
+.week-day.hit{border-color:var(--yellow); color:var(--yellow); background:rgba(244,196,15,.06);}
+.week-day.today{outline:1px solid var(--ink-dim);}
+
+/* ---------- exercise db ---------- */
+.filter-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;}
+.filter-chip{
+  background:transparent; border:1px solid var(--line); color:var(--ink-dim); padding:6px 13px; font-size:13px;
+}
+.filter-chip.active{border-color:var(--yellow); color:var(--yellow);}
+.search-input{
+  width:100%; background:var(--surface); border:1px solid var(--line); color:var(--ink); padding:11px 14px;
+  font-size:14px; margin-bottom:16px; outline:none;
+}
+.search-input:focus{border-color:var(--yellow);}
+.ex-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px;}
+.ex-card{background:var(--surface); border:1px solid var(--line); padding:14px; cursor:pointer; transition:border-color .15s;}
+.ex-card:hover{border-color:var(--yellow);}
+.ex-card .grp{font-size:11px; color:var(--yellow); margin-bottom:6px; letter-spacing:.3px;}
+.ex-card .nm{font-size:15px; font-weight:600; margin-bottom:8px;}
+.ex-card .eq{font-size:12px; color:var(--ink-dim);}
+.modal-bg{
+  position:fixed; inset:0; background:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center;
+  z-index:80; padding:20px;
+}
+.modal{background:var(--surface); border:1px solid var(--line); width:520px; max-width:100%; max-height:88vh; overflow-y:auto; padding:24px;}
+.modal-close{float:right; background:none; border:none; color:var(--ink-dim); font-size:20px; line-height:1;}
+.demo-box{background:var(--bg-alt); border:1px solid var(--line); margin:14px 0; padding:10px; display:flex; justify-content:center;}
+.instr-list{font-size:14px; color:var(--ink-dim); line-height:1.8; padding-left:18px;}
+
+/* ---------- log workout ---------- */
+.log-entry{border:1px solid var(--line); padding:14px; margin-bottom:10px; background:var(--bg-alt); position:relative;}
+.log-entry .rm{position:absolute; top:10px; right:10px; background:none; border:none; color:var(--ink-dim); font-size:16px;}
+.log-entry .rm:hover{color:var(--red);}
+.log-entry .en-title{font-weight:600; margin-bottom:10px; padding-right:24px;}
+.picker-list{max-height:260px; overflow-y:auto; border:1px solid var(--line); margin-top:8px;}
+.picker-item{padding:10px 12px; border-bottom:1px solid var(--line); font-size:14px; display:flex; justify-content:space-between;}
+.picker-item:last-child{border-bottom:none;}
+.picker-item:hover{background:var(--surface-2); cursor:pointer;}
+.picker-item .g{color:var(--ink-dim); font-size:12px;}
+.lock-note{font-size:13px; color:var(--ink-dim); padding:12px 14px; border:1px dashed var(--line); margin-bottom:16px;}
+
+/* ---------- program ---------- */
+.style-pick{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 20px;}
+.style-card{
+  border:1px solid var(--line); padding:12px 16px; font-size:13px; cursor:pointer; flex:1; min-width:150px;
+}
+.style-card.sel{border-color:var(--yellow); background:rgba(244,196,15,.06);}
+.style-card .t{font-weight:600; margin-bottom:3px;}
+.style-card .d{color:var(--ink-dim); font-size:11.5px;}
+.day-card{border:1px solid var(--line); margin-bottom:12px;}
+.day-head{display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:var(--surface-2);}
+.day-head .t{font-weight:700;}
+.day-head .f{font-size:12px; color:var(--yellow);}
+.day-ex{display:flex; justify-content:space-between; align-items:center; padding:10px 16px; border-top:1px solid var(--line); font-size:14px;}
+.day-ex .n{flex:1;}
+.day-ex .p{color:var(--ink-dim); font-family:'JetBrains Mono',monospace; font-size:13px;}
+.day-ex .del{background:none; border:none; color:var(--ink-dim); margin-left:10px;}
+.day-ex .del:hover{color:var(--red);}
+.add-ex-btn{width:100%; text-align:left; background:none; border:none; border-top:1px solid var(--line); color:var(--yellow); padding:10px 16px; font-size:13px;}
+
+/* ---------- profile ---------- */
+.avatar-badge{
+  width:60px; height:60px; border:2px solid var(--yellow); display:flex; align-items:center; justify-content:center;
+  font-size:22px; font-weight:800; color:var(--yellow); flex-shrink:0;
+}
+.update-lock{font-size:12.5px; color:var(--ink-dim); margin-top:6px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =========================================================
+   GymbroStat — single-file client app (localStorage backed)
+   ========================================================= */
+
+/* ---------- constants ---------- */
+const RANKS = [
+  {key:1, min:0,   max:40,  name:()=> "Baby Bro"},
+  {key:2, min:41,  max:80,  name:(g)=> g==='female' ? "Gym Grul" : "Gym Boi"},
+  {key:3, min:81,  max:120, name:()=> "Gym Bro"},
+  {key:4, min:121, max:160, name:()=> "Gym Rat"},
+  {key:5, min:161, max:200, name:()=> "Gym Pro Master"},
+  {key:6, min:201, max:Infinity, name:()=> "The Olympia Brothers"},
+];
+function getRank(xp, gender){
+  xp = Math.max(0, xp);
+  const r = RANKS.find(r=> xp>=r.min && xp<=r.max) || RANKS[RANKS.length-1];
+  return {key:r.key, name:r.name(gender), min:r.min, max:r.max===Infinity? null : r.max};
+}
+function rankAllowsEdit(rankKey){ return rankKey>=3; }
+
+const STYLES = [
+  {id:'powerlifting', name:'Powerlifting', desc:'เน้นแรงสูงสุด น้ำหนักหนัก เรปต่ำ (3-6)'},
+  {id:'sci-based', name:'Sci-Based Hypertrophy', desc:'เน้นโตของกล้ามเนื้อ เรปกลาง (8-12) ตามหลักสรีรวิทยา'},
+  {id:'research-based', name:'Research-Backed', desc:'โปรแกรมอิงงานวิจัยที่มีหลักฐานรองรับสูงสุด'},
+];
+
+/* ---------- exercise database ---------- */
+// motion: which generic SVG loop to show as the "how to" preview
+const EXERCISES = [
+  // CHEST
+  {id:'bb-bench', name:'Barbell Bench Press', group:'อก (Chest)', equip:'บาร์เบล', motion:'push', styles:['powerlifting','research-based'], instr:['นอนราบบนม้านั่ง เท้าวางมั่นคงกับพื้น','จับบาร์กว้างกว่าหัวไหล่เล็กน้อย','ลดบาร์ลงแตะหน้าอกช้าๆ ควบคุมจังหวะ','ดันบาร์กลับขึ้นจนแขนเหยียดตรง']},
+  {id:'db-bench', name:'Dumbbell Bench Press', group:'อก (Chest)', equip:'ดัมเบล', motion:'push', styles:['sci-based','research-based'], instr:['นอนบนม้านั่ง ถือดัมเบลข้างละมือระดับหน้าอก','ดันดัมเบลขึ้นจนแขนเกือบเหยียดตรง','ลดลงช้าๆ จนรู้สึกยืดที่อก','ควบคุมไม่ให้ข้อศอกกระแทกล่างสุด']},
+  {id:'incline-db-press', name:'Incline Dumbbell Press', group:'อก (Chest)', equip:'ดัมเบล', motion:'push', styles:['sci-based'], instr:['ปรับม้านั่งเอียง 30-45 องศา','ดันดัมเบลขึ้นตรงเหนือหน้าอกส่วนบน','ลดลงช้าๆ ควบคุมทุกจังหวะ']},
+  {id:'cable-fly', name:'Cable Chest Fly', group:'อก (Chest)', equip:'สายเคเบิล', motion:'fly', styles:['sci-based','research-based'], instr:['ยืนกลางเครื่องเคเบิล จับสายทั้งสองข้าง','โน้มตัวไปข้างหน้าเล็กน้อย','ดึงมือมาบรรจบกันหน้าลำตัวแบบโค้ง','คลายกลับช้าๆ ควบคุมแรงต้าน']},
+  {id:'pushup', name:'Push-up', group:'อก (Chest)', equip:'น้ำหนักตัว', motion:'push', styles:['sci-based','research-based'], instr:['วางมือกว้างกว่าไหล่เล็กน้อย ลำตัวตรง','ลดตัวลงจนอกเกือบแตะพื้น','ดันตัวกลับขึ้นจนแขนเหยียด']},
+  {id:'dips-chest', name:'Chest Dips', group:'อก (Chest)', equip:'บาร์ดิป', motion:'push', styles:['powerlifting','sci-based'], instr:['จับราวดิป โน้มตัวไปข้างหน้าเล็กน้อย','ลดตัวลงจนไหล่ต่ำกว่าข้อศอก','ดันตัวขึ้นกลับตำแหน่งเริ่มต้น']},
+
+  // BACK
+  {id:'deadlift', name:'Barbell Deadlift', group:'หลัง (Back)', equip:'บาร์เบล', motion:'hinge', styles:['powerlifting','research-based'], instr:['ยืนเท้ากว้างเท่าสะโพก บาร์ชิดหน้าแข้ง','ก้มลงจับบาร์ หลังตรงตลอดการเคลื่อนไหว','ดันสะโพกไปข้างหน้ายืนขึ้นพร้อมบาร์','ควบคุมบาร์ลงกลับอย่างช้าๆ']},
+  {id:'pullup', name:'Pull-up', group:'หลัง (Back)', equip:'บาร์โหน', motion:'pull', styles:['sci-based','research-based'], instr:['จับบาร์กว้างกว่าไหล่ ฝ่ามือหันออก','ดึงตัวขึ้นจนคางพ้นบาร์','ลดตัวลงช้าๆ จนแขนเหยียดตรง']},
+  {id:'lat-pulldown', name:'Lat Pulldown', group:'หลัง (Back)', equip:'เครื่องเคเบิล', motion:'pull', styles:['sci-based','research-based'], instr:['นั่งจับบาร์กว้างกว่าไหล่','ดึงบาร์ลงมาระดับหน้าอกบน','คลายกลับขึ้นช้าๆ ควบคุมแรงต้าน']},
+  {id:'bb-row', name:'Barbell Row', group:'หลัง (Back)', equip:'บาร์เบล', motion:'pull', styles:['powerlifting','sci-based'], instr:['โน้มตัวไปข้างหน้าประมาณ 45 องศา','ดึงบาร์เข้าหาท้องน้อย','ลดบาร์ลงช้าๆ ควบคุมจังหวะ']},
+  {id:'seated-cable-row', name:'Seated Cable Row', group:'หลัง (Back)', equip:'เครื่องเคเบิล', motion:'pull', styles:['sci-based','research-based'], instr:['นั่งเข่างอเล็กน้อย จับที่จับ','ดึงเข้าหาท้องน้อย สะบักหุบเข้าหากัน','คลายกลับช้าๆ']},
+  {id:'tbar-row', name:'T-Bar Row', group:'หลัง (Back)', equip:'บาร์เบล', motion:'pull', styles:['powerlifting','research-based'], instr:['ยืนคร่อมบาร์ โน้มตัวไปข้างหน้า','ดึงบาร์ขึ้นเข้าหาลำตัว','ลดลงช้าๆ ควบคุมแรงต้าน']},
+  {id:'hyperextension', name:'Back Hyperextension', group:'หลัง (Back)', equip:'ม้าไฮเปอร์', motion:'hinge', styles:['research-based'], instr:['นอนคว่ำบนม้าไฮเปอร์ ล็อกขา','ก้มตัวลงช้าๆ จนหลังโค้งเล็กน้อย','ยกตัวขึ้นจนลำตัวเป็นเส้นตรง']},
+
+  // LEGS
+  {id:'back-squat', name:'Barbell Back Squat', group:'ขา (Legs)', equip:'บาร์เบล', motion:'squat', styles:['powerlifting','research-based'], instr:['วางบาร์บนบ่าส่วนบน เท้ากว้างเท่าไหล่','ย่อเข่าลงจนต้นขาขนานพื้น','ดันพื้นยืนขึ้นกลับตำแหน่งเริ่มต้น']},
+  {id:'front-squat', name:'Front Squat', group:'ขา (Legs)', equip:'บาร์เบล', motion:'squat', styles:['sci-based','research-based'], instr:['วางบาร์บนไหล่ด้านหน้า ข้อศอกยกสูง','ย่อตัวลงหลังตรง','ดันขึ้นกลับตำแหน่งเริ่มต้น']},
+  {id:'leg-press', name:'Leg Press', group:'ขา (Legs)', equip:'เครื่องเลกเพรส', motion:'squat', styles:['sci-based','research-based'], instr:['นั่งบนเครื่อง วางเท้ากว้างเท่าไหล่','งอเข่าลงจนใกล้ 90 องศา','ดันแผ่นออกจนขาเกือบเหยียดตรง']},
+  {id:'rdl', name:'Romanian Deadlift', group:'ขา (Legs)', equip:'บาร์เบล', motion:'hinge', styles:['powerlifting','sci-based'], instr:['ถือบาร์หน้าต้นขา เข่างอเล็กน้อย','ดันสะโพกไปด้านหลัง หลังตรง','ลดบาร์ลงจนรู้สึกยืดต้นขาหลัง แล้วดันสะโพกกลับ']},
+  {id:'lunge', name:'Walking Lunge', group:'ขา (Legs)', equip:'ดัมเบล', motion:'squat', styles:['sci-based','research-based'], instr:['ก้าวขาไปข้างหน้ายาวๆ','ย่อตัวลงจนเข่าหลังเกือบแตะพื้น','ดันขึ้นก้าวต่อไปสลับขา']},
+  {id:'leg-curl', name:'Leg Curl', group:'ขา (Legs)', equip:'เครื่องเลกเคิร์ล', motion:'curl', styles:['sci-based','research-based'], instr:['นอนคว่ำบนเครื่อง วางส้นเท้าใต้แผ่นรอง','งอเข่าดึงแผ่นเข้าหาสะโพก','คลายกลับช้าๆ']},
+  {id:'leg-extension', name:'Leg Extension', group:'ขา (Legs)', equip:'เครื่องเลกเอ็กซ์เทนชัน', motion:'curl', styles:['sci-based'], instr:['นั่งบนเครื่อง วางหน้าแข้งใต้แผ่นรอง','เหยียดเข่าขึ้นจนขาตรง','ลดกลับช้าๆ ควบคุม']},
+  {id:'calf-raise', name:'Standing Calf Raise', group:'ขา (Legs)', equip:'เครื่อง/ดัมเบล', motion:'curl', styles:['research-based'], instr:['ยืนปลายเท้าบนแท่นยก ส้นเท้าลอย','เขย่งปลายเท้าขึ้นสุด','ลดส้นเท้าลงช้าๆ จนรู้สึกยืด']},
+  {id:'hip-thrust', name:'Barbell Hip Thrust', group:'ขา (Legs)', equip:'บาร์เบล', motion:'hinge', styles:['sci-based','research-based'], instr:['พิงหลังบนม้านั่ง วางบาร์บนสะโพก','ดันสะโพกขึ้นจนลำตัวเป็นเส้นตรง','ลดลงช้าๆ ควบคุม']},
+
+  // SHOULDERS
+  {id:'ohp', name:'Overhead Press', group:'ไหล่ (Shoulders)', equip:'บาร์เบล', motion:'press', styles:['powerlifting','research-based'], instr:['ยืนถือบาร์ระดับไหล่','ดันบาร์ขึ้นเหนือศีรษะจนแขนเหยียด','ลดกลับช้าๆ ควบคุมจังหวะ']},
+  {id:'db-shoulder-press', name:'Dumbbell Shoulder Press', group:'ไหล่ (Shoulders)', equip:'ดัมเบล', motion:'press', styles:['sci-based'], instr:['นั่งหรือยืนถือดัมเบลระดับไหล่','ดันขึ้นเหนือศีรษะ','ลดกลับช้าๆ']},
+  {id:'lateral-raise', name:'Lateral Raise', group:'ไหล่ (Shoulders)', equip:'ดัมเบล', motion:'fly', styles:['sci-based','research-based'], instr:['ยืนถือดัมเบลข้างลำตัว','ยกแขนขึ้นด้านข้างจนระดับไหล่','ลดลงช้าๆ ควบคุม']},
+  {id:'face-pull', name:'Face Pull', group:'ไหล่ (Shoulders)', equip:'เครื่องเคเบิล', motion:'pull', styles:['research-based'], instr:['ดึงเชือกเข้าหาใบหน้า ข้อศอกสูง','บีบสะบักเข้าหากัน','คลายกลับช้าๆ']},
+  {id:'rear-delt-fly', name:'Rear Delt Fly', group:'ไหล่ (Shoulders)', equip:'ดัมเบล', motion:'fly', styles:['sci-based'], instr:['โน้มตัวไปข้างหน้า ถือดัมเบล','กางแขนออกด้านข้างระดับไหล่','ลดกลับช้าๆ ควบคุม']},
+
+  // ARMS
+  {id:'bb-curl', name:'Barbell Curl', group:'แขน (Arms)', equip:'บาร์เบล', motion:'curl', styles:['sci-based','research-based'], instr:['ยืนถือบาร์ แขนเหยียดข้างลำตัว','งอศอกยกบาร์ขึ้นถึงระดับไหล่','ลดกลับช้าๆ ควบคุม']},
+  {id:'db-curl', name:'Dumbbell Curl', group:'แขน (Arms)', equip:'ดัมเบล', motion:'curl', styles:['sci-based'], instr:['ถือดัมเบลข้างละมือ แขนเหยียด','งอศอกยกขึ้นสลับข้างหรือพร้อมกัน','ลดกลับช้าๆ']},
+  {id:'hammer-curl', name:'Hammer Curl', group:'แขน (Arms)', equip:'ดัมเบล', motion:'curl', styles:['sci-based','research-based'], instr:['ถือดัมเบลแบบหงายข้าง (นิ้วโป้งขึ้น)','งอศอกยกขึ้น','ลดกลับช้าๆ ควบคุม']},
+  {id:'tricep-pushdown', name:'Tricep Pushdown', group:'แขน (Arms)', equip:'เครื่องเคเบิล', motion:'push', styles:['sci-based','research-based'], instr:['ยืนหน้าเครื่องเคเบิล จับบาร์','กดบาร์ลงจนแขนเหยียดตรง','ปล่อยกลับช้าๆ ควบคุม']},
+  {id:'skullcrusher', name:'Skull Crusher', group:'แขน (Arms)', equip:'บาร์เบล/ดัมเบล', motion:'push', styles:['sci-based'], instr:['นอนบนม้านั่ง ถือบาร์เหนือหน้าผาก','งอศอกลดบาร์ลงใกล้หน้าผาก','เหยียดแขนกลับขึ้น']},
+  {id:'dips-tricep', name:'Tricep Dips', group:'แขน (Arms)', equip:'บาร์ดิป', motion:'push', styles:['powerlifting','sci-based'], instr:['จับราวดิป ลำตัวตั้งตรง','ลดตัวลงจนข้อศอกงอ 90 องศา','ดันตัวขึ้นกลับ']},
+
+  // CORE
+  {id:'plank', name:'Plank', group:'แกนกลาง (Core)', equip:'น้ำหนักตัว', motion:'hold', styles:['research-based'], instr:['วางแขนท่อนล่างและปลายเท้าบนพื้น','รักษาลำตัวเป็นเส้นตรง','เกร็งแกนกลางค้างไว้ตามเวลาที่กำหนด']},
+  {id:'hanging-leg-raise', name:'Hanging Leg Raise', group:'แกนกลาง (Core)', equip:'บาร์โหน', motion:'curl', styles:['sci-based'], instr:['ห้อยตัวจับบาร์','ยกขาขึ้นจนขนานพื้นหรือสูงกว่า','ลดลงช้าๆ ควบคุม']},
+  {id:'cable-crunch', name:'Cable Crunch', group:'แกนกลาง (Core)', equip:'เครื่องเคเบิล', motion:'curl', styles:['sci-based','research-based'], instr:['คุกเข่าหน้าเครื่องเคเบิล จับเชือกที่ศีรษะ','งอตัวลงเกร็งหน้าท้อง','คลายกลับช้าๆ']},
+  {id:'russian-twist', name:'Russian Twist', group:'แกนกลาง (Core)', equip:'น้ำหนักตัว/ดัมเบล', motion:'curl', styles:['research-based'], instr:['นั่งเอนตัวเล็กน้อย ยกเท้าลอย','หมุนลำตัวไปด้านข้างสลับซ้ายขวา','ควบคุมจังหวะไม่เหวี่ยงแรง']},
+
+  // CARDIO
+  {id:'treadmill', name:'Treadmill Run', group:'คาร์ดิโอ (Cardio)', equip:'ลู่วิ่ง', motion:'hold', styles:['research-based'], instr:['เริ่มวอร์มอัพด้วยการเดินเร็ว','เพิ่มความเร็วเป็นจ๊อกกิ้งหรือวิ่ง','คูลดาวน์ด้วยการเดินช้าลง']},
+  {id:'rowing', name:'Rowing Machine', group:'คาร์ดิโอ (Cardio)', equip:'เครื่องพาย', motion:'pull', styles:['research-based'], instr:['นั่งจับที่จับ เท้าติดแท่นวาง','ดันขาออกพร้อมดึงมือเข้าหาลำตัว','คืนกลับช้าๆ ควบคุมจังหวะ']},
+];
+
+/* ---------- storage helpers ---------- */
+const DB_KEY = 'gymbrostat_users_v1';
+const SESSION_KEY = 'gymbrostat_session_v1';
+
+function loadDB(){
+  try{
+    const raw = localStorage.getItem(DB_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function saveDB(db){
+  try{ localStorage.setItem(DB_KEY, JSON.stringify(db)); }catch(e){ console.error('save failed', e); }
+}
+function getSession(){
+  try{ return localStorage.getItem(SESSION_KEY); }catch(e){ return null; }
+}
+function setSession(u){
+  try{
+    if(u) localStorage.setItem(SESSION_KEY, u);
+    else localStorage.removeItem(SESSION_KEY);
+  }catch(e){}
+}
+
+function newUserShape(username, password, extra){
+  return Object.assign({
+    username, password,
+    nickname:'', gender:'male', age:null, birthday:'',
+    height:null, weight:null, bodyFat:null,
+    gymName:'', gymPrice:'', gymDuration:'',
+    lastStatsUpdate:null,
+    xp:0,
+    trainingStyles:[],
+    program:null,
+    logs:{}, // dateKey -> {entries:[...], editsUsed:0, xpBreakdown:{daily,leg,load}}
+    processedWeeks:{}, // weekKey -> true
+    createdAt: new Date().toISOString(),
+  }, extra||{});
+}
+
+function seedDefaults(){
+  const db = loadDB();
+  let changed = false;
+  if(!db['fortkub04']){
+    db['fortkub04'] = newUserShape('fortkub04','abc123',{
+      nickname:'Fort', gender:'male', xp:98,
+    });
+    changed = true;
+  }
+  if(!db['mundaz777']){
+    db['mundaz777'] = newUserShape('mundaz777','munnubz777',{
+      nickname:'Mundaz', gender:'female', xp:55,
+    });
+    changed = true;
+  }
+  if(changed) saveDB(db);
+}
+seedDefaults();
+
+/* ---------- date / week helpers ---------- */
+function todayKey(){ return dateKey(new Date()); }
+function dateKey(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function parseKey(k){ const [y,m,d]=k.split('-').map(Number); return new Date(y,m-1,d); }
+// Monday-start week key
+function weekKeyOf(dateStr){
+  const d = parseKey(dateStr);
+  const day = (d.getDay()+6)%7; // 0=Mon
+  const monday = new Date(d); monday.setDate(d.getDate()-day);
+  return dateKey(monday);
+}
+function daysOfWeek(mondayKey){
+  const start = parseKey(mondayKey);
+  const arr=[];
+  for(let i=0;i<7;i++){ const d=new Date(start); d.setDate(start.getDate()+i); arr.push(dateKey(d)); }
+  return arr;
+}
+const THAI_DOW = ['จ','อ','พ','พฤ','ศ','ส','อา'];
+
+/* ---------- xp / rank engine ---------- */
+function exerciseById(id){ return EXERCISES.find(e=>e.id===id); }
+
+function findPreviousWeight(user, exerciseId, beforeDateKey){
+  const dates = Object.keys(user.logs).filter(k=> k<beforeDateKey).sort().reverse();
+  for(const dk of dates){
+    const entry = user.logs[dk].entries.find(e=>e.exerciseId===exerciseId);
+    if(entry) return entry.weight;
+  }
+  return null;
+}
+
+function computeDayBreakdown(user, dk, entries){
+  let leg = 0, load = 0;
+  const hasLeg = entries.some(e=> exerciseById(e.exerciseId)?.group === 'ขา (Legs)');
+  if(hasLeg) leg = 0.25;
+  entries.forEach(e=>{
+    const prev = findPreviousWeight(user, e.exerciseId, dk);
+    if(prev!=null && (e.weight - prev) > 2.5) load += 0.5;
+  });
+  return {leg, load};
+}
+
+function maybeApplyWeeklyEval(user, dk){
+  const wk = weekKeyOf(dk);
+  const d = parseKey(dk);
+  const isSunday = d.getDay()===0; // week-end (Mon-Sun)
+  if(!isSunday) return 0;
+  if(user.processedWeeks[wk]) return 0;
+  const days = daysOfWeek(wk);
+  const checkins = days.filter(x=> user.logs[x]).length;
+  let delta = 0;
+  if(checkins < 2) delta -= 0.25;
+  if(checkins > 3) delta += 1;
+  user.processedWeeks[wk] = true;
+  user.xp = Math.max(0, user.xp + delta);
+  return delta;
+}
+
+function saveWorkoutLog(user, dk, entries){
+  const existing = user.logs[dk];
+  const rank = getRank(user.xp, user.gender);
+  if(existing){
+    if(!rankAllowsEdit(rank.key)) return {ok:false, msg:'แรงค์ของคุณไม่สามารถแก้ไขบันทึกของวันนี้ได้'};
+    if(existing.editsUsed>=1) return {ok:false, msg:'วันนี้แก้ไขครบโควตา 1 ครั้งแล้ว'};
+    // reverse old leg/load xp, keep daily xp as-is
+    const oldB = existing.xpBreakdown;
+    user.xp = Math.max(0, user.xp - oldB.leg - oldB.load);
+    const newB = computeDayBreakdown(user, dk, entries);
+    user.xp += newB.leg + newB.load;
+    existing.entries = entries;
+    existing.editsUsed += 1;
+    existing.xpBreakdown = {daily: oldB.daily, leg:newB.leg, load:newB.load};
+    return {ok:true, msg:'แก้ไขบันทึกสำเร็จ', delta: (newB.leg+newB.load)-(oldB.leg+oldB.load)};
+  } else {
+    const b = computeDayBreakdown(user, dk, entries);
+    const daily = 1;
+    user.xp += daily + b.leg + b.load;
+    user.logs[dk] = {entries, editsUsed:0, xpBreakdown:{daily, leg:b.leg, load:b.load}, createdAt:new Date().toISOString()};
+    const weeklyDelta = maybeApplyWeeklyEval(user, dk);
+    return {ok:true, msg:'บันทึกสำเร็จ', delta: daily+b.leg+b.load+weeklyDelta};
+  }
+}
+
+function canUpdateStats(user){
+  if(!user.lastStatsUpdate) return true;
+  const last = new Date(user.lastStatsUpdate);
+  const diffDays = (Date.now()-last.getTime())/86400000;
+  return diffDays >= 7;
+}
+function applyStatsUpdate(user, patch){
+  Object.assign(user, patch);
+  user.xp += 0.25;
+  user.lastStatsUpdate = new Date().toISOString();
+}
+
+function calcBMI(weight, height){
+  if(!weight || !height) return null;
+  const h = height/100;
+  return +(weight/(h*h)).toFixed(1);
+}
+function bmiCategory(bmi){
+  if(bmi==null) return '-';
+  if(bmi<18.5) return 'น้ำหนักต่ำกว่าเกณฑ์';
+  if(bmi<23) return 'ปกติ';
+  if(bmi<25) return 'ท้วม';
+  if(bmi<30) return 'อ้วนระดับ 1';
+  return 'อ้วนระดับ 2';
+}
+
+/* ---------- program generation ---------- */
+function pickExercisesFor(group, styles, count){
+  let pool = EXERCISES.filter(e=>e.group===group);
+  if(styles && styles.length){
+    const matched = pool.filter(e=> e.styles.some(s=>styles.includes(s)));
+    if(matched.length>=count) pool = matched;
+  }
+  // simple shuffle-ish pick (deterministic-ish by taking spread)
+  const out=[]; const used=new Set();
+  let i=0;
+  while(out.length<count && out.length<pool.length){
+    const idx = (i*3+1) % pool.length;
+    if(!used.has(idx)){ used.add(idx); out.push(pool[idx]); }
+    i++;
+    if(i>50) break;
+  }
+  return out;
+}
+function prescriptionFor(styles){
+  if(styles.includes('powerlifting')) return {sets:5, reps:'4-6'};
+  if(styles.includes('sci-based')) return {sets:4, reps:'8-12'};
+  if(styles.includes('research-based')) return {sets:3, reps:'6-12'};
+  return {sets:3, reps:'8-12'};
+}
+function generateProgram(user){
+  const rank = getRank(user.xp, user.gender);
+  let styles = user.trainingStyles && user.trainingStyles.length ? user.trainingStyles : ['sci-based','research-based'];
+  const presc = prescriptionFor(styles);
+  let days = [];
+  if(rank.key<=2){
+    // beginner: full body x3
+    const plan = [
+      {day:'Day 1', focus:'Full Body A', groups:['อก (Chest)','หลัง (Back)','ขา (Legs)','แกนกลาง (Core)']},
+      {day:'Day 2', focus:'Full Body B', groups:['ไหล่ (Shoulders)','ขา (Legs)','หลัง (Back)','แขน (Arms)']},
+      {day:'Day 3', focus:'Full Body C', groups:['อก (Chest)','ขา (Legs)','แกนกลาง (Core)']},
+    ];
+    days = plan.map(p=>({day:p.day, focus:p.focus, exercises: p.groups.flatMap(g=>pickExercisesFor(g,styles,1))}));
+  } else if(rank.key<=4){
+    // intermediate: upper/lower x4
+    const plan = [
+      {day:'Day 1', focus:'Upper Body', groups:['อก (Chest)','หลัง (Back)','ไหล่ (Shoulders)','แขน (Arms)']},
+      {day:'Day 2', focus:'Lower Body', groups:['ขา (Legs)','ขา (Legs)','แกนกลาง (Core)']},
+      {day:'Day 3', focus:'Upper Body', groups:['อก (Chest)','หลัง (Back)','ไหล่ (Shoulders)']},
+      {day:'Day 4', focus:'Lower Body', groups:['ขา (Legs)','ขา (Legs)','แกนกลาง (Core)']},
+    ];
+    days = plan.map(p=>({day:p.day, focus:p.focus, exercises: p.groups.flatMap(g=>pickExercisesFor(g,styles,1))}));
+  } else {
+    // advanced: PPL x5-6
+    const plan = [
+      {day:'Day 1', focus:'Push', groups:['อก (Chest)','ไหล่ (Shoulders)','แขน (Arms)']},
+      {day:'Day 2', focus:'Pull', groups:['หลัง (Back)','ไหล่ (Shoulders)','แขน (Arms)']},
+      {day:'Day 3', focus:'Legs', groups:['ขา (Legs)','ขา (Legs)','แกนกลาง (Core)']},
+      {day:'Day 4', focus:'Push', groups:['อก (Chest)','ไหล่ (Shoulders)','แขน (Arms)']},
+      {day:'Day 5', focus:'Pull', groups:['หลัง (Back)','แกนกลาง (Core)']},
+      {day:'Day 6', focus:'Legs', groups:['ขา (Legs)','ขา (Legs)']},
+    ];
+    days = plan.map(p=>({day:p.day, focus:p.focus, exercises: p.groups.flatMap(g=>pickExercisesFor(g,styles,1))}));
+  }
+  days.forEach(d=>{
+    d.exercises = d.exercises.filter(Boolean).map(e=>({exerciseId:e.id, sets:presc.sets, reps:presc.reps}));
+  });
+  return {styles, generatedAt:new Date().toISOString(), days};
+}
+
+/* =========================================================
+   Rendering
+   ========================================================= */
+const app = document.getElementById('app');
+let state = {
+  screen: getSession() ? 'dashboard' : 'auth',
+  authTab: 'login',
+  navFilter: {group:'ทั้งหมด', q:''},
+  logDraft: {date: todayKey(), entries:[]},
+  showPicker: false,
+  activeExerciseModal: null,
+  toast: null,
+};
+
+function currentUser(){
+  const uname = getSession();
+  if(!uname) return null;
+  const db = loadDB();
+  return db[uname] || null;
+}
+function persistUser(user){
+  const db = loadDB();
+  db[user.username] = user;
+  saveDB(db);
+}
+function showToast(msg){
+  state.toast = msg;
+  render();
+  setTimeout(()=>{ state.toast=null; render(); }, 2200);
+}
+
+function h(strings, ...vals){ return strings.reduce((acc,s,i)=> acc+s+(vals[i]!==undefined?vals[i]:''), ''); }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- generic motion SVGs ---------- */
+function motionSVG(motion){
+  const common = 'width="160" height="120" viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg"';
+  const stroke = 'stroke="var(--yellow)" stroke-width="4" fill="none" stroke-linecap="round"';
+  const map = {
+    push: `<svg ${common}><circle cx="40" cy="30" r="10" ${stroke}/><line x1="40" y1="40" x2="40" y2="70" ${stroke}/><line x1="40" y1="70" x2="20" y2="110" ${stroke}/><line x1="40" y1="70" x2="60" y2="110" ${stroke}/>
+      <g><line x1="40" y1="48" x2="90" y2="48" ${stroke}><animate attributeName="x2" values="90;110;90" dur="1.4s" repeatCount="indefinite"/></line>
+      <line x1="40" y1="48" x2="90" y2="48" ${stroke} transform="translate(0,10)"><animate attributeName="x2" values="90;110;90" dur="1.4s" repeatCount="indefinite"/></line></g></svg>`,
+    pull: `<svg ${common}><circle cx="120" cy="25" r="10" ${stroke}/><line x1="120" y1="35" x2="120" y2="65" ${stroke}/><line x1="120" y1="65" x2="105" y2="105" ${stroke}/><line x1="120" y1="65" x2="135" y2="105" ${stroke}/>
+      <line x1="120" y1="45" x2="70" y2="45" ${stroke}><animate attributeName="x1" values="70;50;70" dur="1.4s" repeatCount="indefinite"/></line>
+      <line x1="120" y1="55" x2="70" y2="55" ${stroke}><animate attributeName="x1" values="70;50;70" dur="1.4s" repeatCount="indefinite"/></line></svg>`,
+    squat: `<svg ${common}><circle cx="80" cy="25" r="10" ${stroke}/><line x1="80" y1="35" x2="80" y2="60" ${stroke}><animate attributeName="y2" values="60;75;60" dur="1.6s" repeatCount="indefinite"/></line>
+      <line x1="80" y1="60" x2="55" y2="95" ${stroke}><animate attributeName="y1" values="60;75;60" dur="1.6s" repeatCount="indefinite"/><animate attributeName="x2" values="55;45;55" dur="1.6s" repeatCount="indefinite"/></line>
+      <line x1="80" y1="60" x2="105" y2="95" ${stroke}><animate attributeName="y1" values="60;75;60" dur="1.6s" repeatCount="indefinite"/><animate attributeName="x2" values="105;115;105" dur="1.6s" repeatCount="indefinite"/></line>
+      <line x1="50" y1="50" x2="110" y2="50" ${stroke}><animate attributeName="y1" values="50;65;50" dur="1.6s" repeatCount="indefinite"/><animate attributeName="y2" values="50;65;50" dur="1.6s" repeatCount="indefinite"/></line></svg>`,
+    hinge: `<svg ${common}><circle cx="80" cy="20" r="10" ${stroke}><animate attributeName="cy" values="20;45;20" dur="1.6s" repeatCount="indefinite"/><animate attributeName="cx" values="80;60;80" dur="1.6s" repeatCount="indefinite"/></circle>
+      <line x1="80" y1="30" x2="80" y2="65" ${stroke}><animate attributeName="x1" values="80;60;80" dur="1.6s" repeatCount="indefinite"/><animate attributeName="y1" values="30;50;30" dur="1.6s" repeatCount="indefinite"/></line>
+      <line x1="80" y1="65" x2="80" y2="105" ${stroke}/>
+      <line x1="60" y1="55" x2="30" y2="70" ${stroke}><animate attributeName="y1" values="55;80;55" dur="1.6s" repeatCount="indefinite"/></line></svg>`,
+    press: `<svg ${common}><circle cx="80" cy="60" r="10" ${stroke}/><line x1="80" y1="70" x2="80" y2="100" ${stroke}/>
+      <line x1="80" y1="50" x2="80" y2="20" ${stroke}><animate attributeName="y2" values="20;45;20" dur="1.4s" repeatCount="indefinite"/></line>
+      <line x1="80" y1="50" x2="55" y2="30" ${stroke}><animate attributeName="y2" values="30;55;30" dur="1.4s" repeatCount="indefinite"/></line>
+      <line x1="80" y1="50" x2="105" y2="30" ${stroke}><animate attributeName="y2" values="30;55;30" dur="1.4s" repeatCount="indefinite"/></line></svg>`,
+    fly: `<svg ${common}><circle cx="80" cy="30" r="10" ${stroke}/><line x1="80" y1="40" x2="80" y2="90" ${stroke}/>
+      <line x1="80" y1="55" x2="40" y2="65" ${stroke}><animate attributeName="x2" values="40;75;40" dur="1.5s" repeatCount="indefinite"/></line>
+      <line x1="80" y1="55" x2="120" y2="65" ${stroke}><animate attributeName="x2" values="120;85;120" dur="1.5s" repeatCount="indefinite"/></line></svg>`,
+    curl: `<svg ${common}><circle cx="80" cy="25" r="10" ${stroke}/><line x1="80" y1="35" x2="80" y2="80" ${stroke}/>
+      <line x1="80" y1="45" x2="105" y2="70" ${stroke}><animate attributeName="x2" values="105;90;105" dur="1.3s" repeatCount="indefinite"/><animate attributeName="y2" values="70;45;70" dur="1.3s" repeatCount="indefinite"/></line>
+      <line x1="80" y1="80" x2="65" y2="115" ${stroke}/><line x1="80" y1="80" x2="95" y2="115" ${stroke}/></svg>`,
+    hold: `<svg ${common}><circle cx="35" cy="55" r="9" ${stroke}/><line x1="42" y1="60" x2="120" y2="60" ${stroke}/><line x1="42" y1="60" x2="42" y2="85" ${stroke}/><line x1="120" y1="60" x2="120" y2="85" ${stroke}/><line x1="60" y1="60" x2="60" y2="85" ${stroke}/></svg>`,
+  };
+  return map[motion] || map.hold;
+}
+
+/* ---------- icons (minimal inline svg) ---------- */
+const ICONS = {
+  dashboard: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>',
+  log: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+  db: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>',
+  program: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+  profile: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+};
+
+/* ---------- top-level render ---------- */
+function render(){
+  const user = currentUser();
+  if(!user){ state.screen='auth'; }
+  if(state.screen==='auth'){
+    app.innerHTML = renderAuth();
+    bindAuth();
+    return;
+  }
+  app.innerHTML = renderShell(user);
+  bindShell(user);
+}
+
+/* ================= AUTH ================= */
+function renderAuth(){
+  return h`
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-logo">GYMBRO<span class="dot">STAT</span></div>
+      <div class="auth-tag">บันทึกการเล่นเวท ไต่แรงค์ กลายเป็นพี่ใหญ่ยิม</div>
+      <div class="auth-tabs">
+        <button data-tab="login" class="${state.authTab==='login'?'active':''}">เข้าสู่ระบบ</button>
+        <button data-tab="register" class="${state.authTab==='register'?'active':''}">สมัครสมาชิก</button>
+      </div>
+      ${state.authTab==='login' ? renderLoginForm() : renderRegisterForm()}
+      <div class="plate-row"><div></div><div></div><div></div><div></div><div></div></div>
+    </div>
+  </div>`;
+}
+function renderLoginForm(){
+  return h`
+  <form id="loginForm">
+    <div class="field"><label>ไอดีผู้ใช้ (Username)</label><input name="username" autocomplete="username" required></div>
+    <div class="field"><label>รหัสผ่าน (Password)</label><input name="password" type="password" autocomplete="current-password" required></div>
+    ${state.authError?`<div class="errmsg">${esc(state.authError)}</div>`:''}
+    <button class="btn block" type="submit">เข้าสู่ระบบ</button>
+  </form>`;
+}
+function renderRegisterForm(){
+  return h`
+  <form id="registerForm">
+    <div class="field"><label>ตั้งไอดีผู้ใช้ (Username)</label><input name="username" required></div>
+    <div class="field"><label>ตั้งรหัสผ่าน (Password)</label><input name="password" type="password" required></div>
+    <div class="field"><label>ชื่อเล่น</label><input name="nickname" required></div>
+    <div class="field"><label>เพศ</label>
+      <select name="gender"><option value="male">ชาย</option><option value="female">หญิง</option></select>
+    </div>
+    ${state.authError?`<div class="errmsg">${esc(state.authError)}</div>`:''}
+    <button class="btn block" type="submit">สร้างบัญชี</button>
+  </form>`;
+}
+function bindAuth(){
+  document.querySelectorAll('.auth-tabs button').forEach(b=>{
+    b.onclick = ()=>{ state.authTab=b.dataset.tab; state.authError=null; render(); };
+  });
+  const lf = document.getElementById('loginForm');
+  if(lf) lf.onsubmit = (e)=>{
+    e.preventDefault();
+    const fd = new FormData(lf);
+    const uname = fd.get('username').trim();
+    const pass = fd.get('password');
+    const db = loadDB();
+    const u = db[uname];
+    if(!u || u.password!==pass){ state.authError='ไอดีหรือรหัสผ่านไม่ถูกต้อง'; render(); return; }
+    setSession(uname);
+    state.screen='dashboard'; state.authError=null;
+    render();
+  };
+  const rf = document.getElementById('registerForm');
+  if(rf) rf.onsubmit = (e)=>{
+    e.preventDefault();
+    const fd = new FormData(rf);
+    const uname = fd.get('username').trim();
+    if(!uname){ state.authError='กรุณากรอกไอดี'; render(); return; }
+    const db = loadDB();
+    if(db[uname]){ state.authError='ไอดีนี้ถูกใช้แล้ว'; render(); return; }
+    const u = newUserShape(uname, fd.get('password'), {
+      nickname: fd.get('nickname')||uname, gender: fd.get('gender'),
+    });
+    db[uname]=u; saveDB(db);
+    setSession(uname);
+    state.screen='dashboard'; state.authError=null;
+    render();
+  };
+}
+
+/* ================= SHELL ================= */
+function renderShell(user){
+  const rank = getRank(user.xp, user.gender);
+  const navItems = [
+    {id:'dashboard', label:'แดชบอร์ด'},
+    {id:'log', label:'บันทึกวันนี้'},
+    {id:'exercises', label:'ฐานข้อมูลท่า'},
+    {id:'program', label:'โปรแกรมของฉัน'},
+    {id:'profile', label:'โปรไฟล์'},
+  ];
+  return h`
+  <div class="topbar">
+    <div class="brand">GYMBRO<span class="dot">STAT</span></div>
+    <div class="topbar-right">
+      <div class="rank-chip">${esc(user.nickname||user.username)} · <b>${esc(rank.name)}</b> · ${user.xp.toFixed(2)} XP</div>
+      <button class="logout-btn" id="logoutBtn">ออกจากระบบ</button>
+    </div>
+  </div>
+  <div class="shell">
+    <div class="sidenav">
+      ${navItems.map(n=>h`<button class="navbtn ${state.screen===n.id?'active':''}" data-nav="${n.id}">${ICONS[n.id]} ${n.label}</button>`).join('')}
+    </div>
+    <div class="main" id="mainArea"></div>
+  </div>
+  <div class="bottomnav">
+    ${navItems.map(n=>h`<button class="${state.screen===n.id?'active':''}" data-nav="${n.id}">${ICONS[n.id]}<span>${n.label}</span></button>`).join('')}
+  </div>
+  ${state.toast? `<div class="toast">${esc(state.toast)}</div>`:''}
+  `;
+}
+function bindShell(user){
+  document.getElementById('logoutBtn').onclick = ()=>{ setSession(null); state.screen='auth'; render(); };
+  document.querySelectorAll('[data-nav]').forEach(b=>{
+    b.onclick = ()=>{ state.screen=b.dataset.nav; state.activeExerciseModal=null; render(); };
+  });
+  const main = document.getElementById('mainArea');
+  if(state.screen==='dashboard') { main.innerHTML = renderDashboard(user); bindDashboard(user); }
+  else if(state.screen==='log') { main.innerHTML = renderLog(user); bindLog(user); }
+  else if(state.screen==='exercises') { main.innerHTML = renderExercises(user); bindExercises(user); }
+  else if(state.screen==='program') { main.innerHTML = renderProgram(user); bindProgram(user); }
+  else if(state.screen==='profile') { main.innerHTML = renderProfile(user); bindProfile(user); }
+}
+
+/* ================= DASHBOARD ================= */
+function renderDashboard(user){
+  const rank = getRank(user.xp, user.gender);
+  const nextMin = rank.max!=null ? rank.max+1 : null;
+  const spanMin = rank.min, spanMax = rank.max!=null? rank.max : rank.min+40;
+  const pct = Math.min(100, Math.max(0, ((user.xp-spanMin)/((spanMax-spanMin)||1))*100));
+  const todayLogged = !!user.logs[todayKey()];
+  const wk = weekKeyOf(todayKey());
+  const week = daysOfWeek(wk);
+  const totalSessions = Object.keys(user.logs).length;
+  const bmi = calcBMI(user.weight, user.height);
+
+  return h`
+  <h1 class="page-title">สวัสดี, ${esc(user.nickname||user.username)}</h1>
+  <div class="page-sub">ภาพรวมสถานะนักยกของคุณวันนี้</div>
+
+  <div class="hero-card">
+    <div class="hero-top">
+      <div>
+        <div class="hero-rank">แรงค์ปัจจุบัน</div>
+        <div class="hero-rankname">${esc(rank.name)}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="xp-num">${user.xp.toFixed(2)}</div>
+        <div class="xp-label">XP ทั้งหมด</div>
+      </div>
+    </div>
+    <div class="xp-bar-wrap">
+      <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+      <div class="xp-bar-labels">
+        <span>${spanMin} XP</span>
+        <span>${rank.max!=null ? 'ต่อไป: '+nextMin+' XP' : 'แรงค์สูงสุดแล้ว'}</span>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="v">${totalSessions}</div><div class="l">ครั้งที่เข้ายิมทั้งหมด</div></div>
+      <div class="stat-box"><div class="v">${bmi ?? '-'}</div><div class="l">BMI (${bmiCategory(bmi)})</div></div>
+      <div class="stat-box"><div class="v">${user.weight ?? '-'}</div><div class="l">น้ำหนัก (kg)</div></div>
+      <div class="stat-box"><div class="v">${user.bodyFat ?? '-'}</div><div class="l">% Fat</div></div>
+    </div>
+    <div class="checkin-status">
+      <div class="checkin-dot ${todayLogged?'done':''}"></div>
+      <div>${todayLogged? 'วันนี้เช็คอินเข้ายิมแล้ว ทำได้ดีมาก' : 'วันนี้ยังไม่ได้บันทึกการเข้ายิม ไปบันทึกกันเลย'}</div>
+    </div>
+    <div class="week-strip">
+      ${week.map((dk,i)=>{
+        const hit = !!user.logs[dk];
+        const isToday = dk===todayKey();
+        return `<div class="week-day ${hit?'hit':''} ${isToday?'today':''}">${THAI_DOW[i]}</div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">เกณฑ์การให้ XP</div>
+    <div style="font-size:13.5px; color:var(--ink-dim); line-height:2;">
+      + 1.00 XP — บันทึกเข้ายิมในแต่ละวัน<br>
+      + 0.50 XP — เพิ่มน้ำหนัก (load) มากกว่า 2.5kg จากครั้งก่อนในท่านั้นๆ<br>
+      + 0.25 XP — เล่นกล้ามเนื้อมัดขาในวันนั้น<br>
+      + 0.25 XP — อัปเดตน้ำหนัก/สัดส่วนร่างกาย (สัปดาห์ละ 1 ครั้ง)<br>
+      + 1.00 XP — โบนัส หากเข้ายิมมากกว่า 3 ครั้งในสัปดาห์<br>
+      − 0.25 XP — หากเข้ายิมน้อยกว่า 2 ครั้งในสัปดาห์
+    </div>
+  </div>`;
+}
+function bindDashboard(user){}
+
+/* ================= LOG WORKOUT ================= */
+function renderLog(user){
+  const dk = state.logDraft.date;
+  const existing = user.logs[dk];
+  const rank = getRank(user.xp, user.gender);
+  const locked = existing && !(rankAllowsEdit(rank.key) && existing.editsUsed<1);
+  const entries = state.logDraft.entries;
+
+  let lockNote = '';
+  if(existing){
+    if(rankAllowsEdit(rank.key) && existing.editsUsed<1){
+      lockNote = `<div class="lock-note">บันทึกของวันนี้มีอยู่แล้ว แรงค์ ${esc(rank.name)} สามารถแก้ไขได้อีก 1 ครั้ง — การแก้ไขจะแทนที่ข้อมูลเดิมทั้งหมด</div>`;
+    } else {
+      lockNote = `<div class="lock-note">วันนี้บันทึกและใช้สิทธิ์แก้ไขครบแล้ว ไม่สามารถแก้ไขเพิ่มได้ (เฉพาะแรงค์ Gym Bro ขึ้นไปแก้ไขได้ 1 ครั้ง/วัน)</div>`;
+    }
+  }
+
+  return h`
+  <h1 class="page-title">บันทึกการเล่นเวท</h1>
+  <div class="page-sub">เลือกท่า ใส่น้ำหนัก/เรป/เซ็ต แล้วบันทึกได้วันละ 1 ครั้ง</div>
+
+  <div class="card">
+    <div class="field" style="max-width:220px;">
+      <label>วันที่</label>
+      <input type="date" id="logDate" value="${dk}" max="${todayKey()}">
+    </div>
+    ${lockNote}
+
+    <div id="entriesWrap">
+      ${entries.length===0 ? '<div class="empty">ยังไม่ได้เพิ่มท่าออกกำลังกาย</div>' :
+        entries.map((en,i)=>{
+          const ex = exerciseById(en.exerciseId);
+          return h`<div class="log-entry">
+            <button class="rm" data-rm="${i}" ${locked?'disabled style="visibility:hidden"':''}>✕</button>
+            <div class="en-title">${esc(ex.name)} <span style="color:var(--ink-dim); font-weight:400; font-size:12px;">· ${esc(ex.group)}</span></div>
+            <div class="grid3">
+              <div class="field" style="margin-bottom:0;"><label>น้ำหนัก (kg)</label><input type="number" step="0.5" min="0" data-field="weight" data-idx="${i}" value="${en.weight}" ${locked?'disabled':''}></div>
+              <div class="field" style="margin-bottom:0;"><label>เซ็ต (sets)</label><input type="number" min="1" data-field="sets" data-idx="${i}" value="${en.sets}" ${locked?'disabled':''}></div>
+              <div class="field" style="margin-bottom:0;"><label>ครั้ง/เซ็ต (reps)</label><input type="number" min="1" data-field="reps" data-idx="${i}" value="${en.reps}" ${locked?'disabled':''}></div>
+            </div>
+          </div>`;
+        }).join('')
+      }
+    </div>
+
+    ${!locked ? `<button class="btn secondary" id="addExBtn" style="margin-top:6px;">+ เพิ่มท่าออกกำลังกาย</button>` : ''}
+
+    ${state.showPicker ? renderPicker() : ''}
+
+    <div class="divider"></div>
+    <button class="btn block" id="saveLogBtn" ${locked||entries.length===0?'disabled':''}>${existing?'บันทึกการแก้ไข':'บันทึกวันนี้'}</button>
+  </div>`;
+}
+function renderPicker(){
+  const q = (state.pickerQ||'').toLowerCase();
+  const list = EXERCISES.filter(e=> e.name.toLowerCase().includes(q) || e.group.includes(q));
+  return h`
+  <div class="card" style="background:var(--surface-2); margin-top:10px;">
+    <input class="search-input" id="pickerSearch" placeholder="ค้นหาท่า..." value="${esc(state.pickerQ||'')}">
+    <div class="picker-list">
+      ${list.map(e=>h`<div class="picker-item" data-pick="${e.id}"><span>${esc(e.name)}</span><span class="g">${esc(e.group)}</span></div>`).join('') || '<div class="picker-item">ไม่พบท่านี้</div>'}
+    </div>
+  </div>`;
+}
+function bindLog(user){
+  document.getElementById('logDate').onchange = (e)=>{
+    const val = e.target.value;
+    state.logDraft.date = val;
+    const existing = user.logs[val];
+    state.logDraft.entries = existing ? existing.entries.map(x=>({...x})) : [];
+    state.showPicker=false;
+    render();
+  };
+  const addBtn = document.getElementById('addExBtn');
+  if(addBtn) addBtn.onclick = ()=>{ state.showPicker=!state.showPicker; state.pickerQ=''; render(); };
+  const psearch = document.getElementById('pickerSearch');
+  if(psearch) psearch.oninput = (e)=>{ state.pickerQ=e.target.value; render(); document.getElementById('pickerSearch').focus(); };
+  document.querySelectorAll('[data-pick]').forEach(el=>{
+    el.onclick = ()=>{
+      state.logDraft.entries.push({exerciseId:el.dataset.pick, weight:0, sets:3, reps:10});
+      state.showPicker=false;
+      render();
+    };
+  });
+  document.querySelectorAll('[data-rm]').forEach(el=>{
+    el.onclick = ()=>{ state.logDraft.entries.splice(+el.dataset.rm,1); render(); };
+  });
+  document.querySelectorAll('[data-field]').forEach(el=>{
+    el.oninput = ()=>{
+      const idx=+el.dataset.idx, field=el.dataset.field;
+      state.logDraft.entries[idx][field] = +el.value;
+    };
+  });
+  const saveBtn = document.getElementById('saveLogBtn');
+  if(saveBtn) saveBtn.onclick = ()=>{
+    const entries = state.logDraft.entries.map(e=>({exerciseId:e.exerciseId, weight:+e.weight||0, sets:+e.sets||1, reps:+e.reps||1}));
+    const res = saveWorkoutLog(user, state.logDraft.date, entries);
+    if(!res.ok){ showToast(res.msg); return; }
+    persistUser(user);
+    showToast(`${res.msg} (${res.delta>=0?'+':''}${res.delta.toFixed(2)} XP)`);
+    render();
+  };
+}
+
+/* ================= EXERCISE DATABASE ================= */
+function renderExercises(user){
+  const groups = ['ทั้งหมด', ...Array.from(new Set(EXERCISES.map(e=>e.group)))];
+  const q = (state.navFilter.q||'').toLowerCase();
+  const list = EXERCISES.filter(e=>{
+    const gOk = state.navFilter.group==='ทั้งหมด' || e.group===state.navFilter.group;
+    const qOk = !q || e.name.toLowerCase().includes(q);
+    return gOk && qOk;
+  });
+  return h`
+  <h1 class="page-title">ฐานข้อมูลท่าออกกำลังกาย</h1>
+  <div class="page-sub">รวมท่าเวทเทรนนิ่งยอดนิยม พร้อมภาพประกอบวิธีเล่นเบื้องต้น (${EXERCISES.length} ท่า)</div>
+  <input class="search-input" id="exSearch" placeholder="ค้นหาชื่อท่า..." value="${esc(state.navFilter.q||'')}">
+  <div class="filter-row">
+    ${groups.map(g=>h`<button class="filter-chip ${state.navFilter.group===g?'active':''}" data-grp="${esc(g)}">${esc(g)}</button>`).join('')}
+  </div>
+  <div class="ex-grid">
+    ${list.map(e=>h`<div class="ex-card" data-ex="${e.id}">
+      <div class="grp">${esc(e.group)}</div>
+      <div class="nm">${esc(e.name)}</div>
+      <div class="eq">อุปกรณ์: ${esc(e.equip)}</div>
+    </div>`).join('') || '<div class="empty">ไม่พบท่าที่ค้นหา</div>'}
+  </div>
+  ${state.activeExerciseModal ? renderExerciseModal(exerciseById(state.activeExerciseModal)) : ''}
+  `;
+}
+function renderExerciseModal(ex){
+  return h`
+  <div class="modal-bg" id="modalBg">
+    <div class="modal">
+      <button class="modal-close" id="modalClose">✕</button>
+      <div class="grp" style="color:var(--yellow); font-size:12px;">${esc(ex.group)}</div>
+      <div style="font-size:20px; font-weight:700; margin-top:4px;">${esc(ex.name)}</div>
+      <div style="font-size:13px; color:var(--ink-dim); margin-top:2px;">อุปกรณ์: ${esc(ex.equip)}</div>
+      <div class="demo-box">${motionSVG(ex.motion)}</div>
+      <div class="section-label">วิธีเล่นเบื้องต้น</div>
+      <ol class="instr-list">${ex.instr.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
+    </div>
+  </div>`;
+}
+function bindExercises(user){
+  document.getElementById('exSearch').oninput = (e)=>{ state.navFilter.q=e.target.value; render(); const el=document.getElementById('exSearch'); el.focus(); el.selectionStart=el.selectionEnd=el.value.length; };
+  document.querySelectorAll('[data-grp]').forEach(b=>{
+    b.onclick=()=>{ state.navFilter.group=b.dataset.grp; render(); };
+  });
+  document.querySelectorAll('[data-ex]').forEach(c=>{
+    c.onclick=()=>{ state.activeExerciseModal=c.dataset.ex; render(); };
+  });
+  const bg = document.getElementById('modalBg');
+  if(bg){
+    bg.onclick=(e)=>{ if(e.target.id==='modalBg'){ state.activeExerciseModal=null; render(); } };
+    document.getElementById('modalClose').onclick=()=>{ state.activeExerciseModal=null; render(); };
+  }
+}
+
+/* ================= PROGRAM ================= */
+function renderProgram(user){
+  const styles = user.trainingStyles||[];
+  return h`
+  <h1 class="page-title">โปรแกรมของฉัน</h1>
+  <div class="page-sub">สร้างโปรแกรมอัตโนมัติตามประสบการณ์และเป้าหมาย แก้ไขเพิ่ม/ลบท่าได้อิสระ</div>
+
+  <div class="card">
+    <div class="section-label">เลือกแนวทางการเทรน (เลือกได้สูงสุด 2 อย่าง ไม่บังคับ)</div>
+    <div class="style-pick">
+      ${STYLES.map(s=>h`<div class="style-card ${styles.includes(s.id)?'sel':''}" data-style="${s.id}">
+        <div class="t">${esc(s.name)}</div><div class="d">${esc(s.desc)}</div>
+      </div>`).join('')}
+    </div>
+    <button class="btn" id="genProgramBtn">${user.program?'สร้างโปรแกรมใหม่':'สร้างโปรแกรมให้ฉัน'}</button>
+  </div>
+
+  ${user.program ? h`
+    <div class="card">
+      <div class="section-label">โปรแกรมปัจจุบัน (${user.program.days.length} วัน/สัปดาห์)</div>
+      ${user.program.days.map((d,di)=>h`
+        <div class="day-card">
+          <div class="day-head"><span class="t">${esc(d.day)}</span><span class="f">${esc(d.focus)}</span></div>
+          ${d.exercises.map((ex,ei)=>{
+            const info = exerciseById(ex.exerciseId);
+            return h`<div class="day-ex">
+              <span class="n">${esc(info?info.name:ex.exerciseId)}</span>
+              <span class="p">${ex.sets}x${ex.reps}</span>
+              <button class="del" data-deldayex="${di}:${ei}">✕</button>
+            </div>`;
+          }).join('')}
+          <button class="add-ex-btn" data-addto="${di}">+ เพิ่มท่าในวันนี้</button>
+        </div>
+      `).join('')}
+    </div>
+  ` : '<div class="empty">ยังไม่มีโปรแกรม กดสร้างโปรแกรมให้ฉันด้านบน</div>'}
+
+  ${state.programPickerFor!=null ? renderProgramPicker() : ''}
+  `;
+}
+function renderProgramPicker(){
+  const q=(state.programPickerQ||'').toLowerCase();
+  const list = EXERCISES.filter(e=>e.name.toLowerCase().includes(q));
+  return h`
+  <div class="card" style="background:var(--surface-2);">
+    <div class="section-label">เพิ่มท่าเข้าโปรแกรม</div>
+    <input class="search-input" id="progPickSearch" placeholder="ค้นหาท่า..." value="${esc(state.programPickerQ||'')}">
+    <div class="picker-list">
+      ${list.map(e=>h`<div class="picker-item" data-progpick="${e.id}"><span>${esc(e.name)}</span><span class="g">${esc(e.group)}</span></div>`).join('')}
+    </div>
+    <button class="btn secondary" style="margin-top:10px;" id="progPickCancel">ยกเลิก</button>
+  </div>`;
+}
+function bindProgram(user){
+  document.querySelectorAll('[data-style]').forEach(c=>{
+    c.onclick=()=>{
+      const id=c.dataset.style;
+      let cur = user.trainingStyles||[];
+      if(cur.includes(id)) cur = cur.filter(x=>x!==id);
+      else { if(cur.length>=2) cur=[cur[1]]; cur=[...cur,id]; }
+      user.trainingStyles = cur;
+      persistUser(user);
+      render();
+    };
+  });
+  document.getElementById('genProgramBtn').onclick = ()=>{
+    user.program = generateProgram(user);
+    persistUser(user);
+    showToast('สร้างโปรแกรมใหม่แล้ว');
+    render();
+  };
+  document.querySelectorAll('[data-deldayex]').forEach(b=>{
+    b.onclick=()=>{
+      const [di,ei] = b.dataset.deldayex.split(':').map(Number);
+      user.program.days[di].exercises.splice(ei,1);
+      persistUser(user);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-addto]').forEach(b=>{
+    b.onclick=()=>{ state.programPickerFor=+b.dataset.addto; state.programPickerQ=''; render(); };
+  });
+  const pps = document.getElementById('progPickSearch');
+  if(pps) pps.oninput=(e)=>{ state.programPickerQ=e.target.value; render(); const el=document.getElementById('progPickSearch'); el.focus(); el.selectionStart=el.selectionEnd=el.value.length; };
+  document.querySelectorAll('[data-progpick]').forEach(el=>{
+    el.onclick=()=>{
+      user.program.days[state.programPickerFor].exercises.push({exerciseId:el.dataset.progpick, sets:3, reps:'8-12'});
+      persistUser(user);
+      state.programPickerFor=null;
+      render();
+    };
+  });
+  const cancelBtn = document.getElementById('progPickCancel');
+  if(cancelBtn) cancelBtn.onclick=()=>{ state.programPickerFor=null; render(); };
+}
+
+/* ================= PROFILE ================= */
+function renderProfile(user){
+  const rank = getRank(user.xp, user.gender);
+  const bmi = calcBMI(user.weight, user.height);
+  const canUpdate = canUpdateStats(user);
+  let nextUpdateStr = '';
+  if(!canUpdate){
+    const last = new Date(user.lastStatsUpdate);
+    const next = new Date(last.getTime()+7*86400000);
+    nextUpdateStr = `อัปเดตได้อีกครั้งวันที่ ${next.toLocaleDateString('th-TH')}`;
+  }
+  return h`
+  <h1 class="page-title">โปรไฟล์ของฉัน</h1>
+  <div class="page-sub">ข้อมูลส่วนตัว สถิติร่างกาย และยิมที่ใช้บริการ</div>
+
+  <div class="card row" style="align-items:center; gap:16px;">
+    <div class="avatar-badge">${esc((user.nickname||user.username).slice(0,2).toUpperCase())}</div>
+    <div>
+      <div style="font-size:18px; font-weight:700;">${esc(user.nickname||user.username)}</div>
+      <div style="font-size:13px; color:var(--ink-dim);">@${esc(user.username)} · ${esc(rank.name)} · ${user.xp.toFixed(2)} XP</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">ข้อมูลส่วนตัว</div>
+    <form id="personalForm">
+      <div class="grid2">
+        <div class="field"><label>ชื่อเล่น</label><input name="nickname" value="${esc(user.nickname||'')}"></div>
+        <div class="field"><label>เพศ</label>
+          <select name="gender">
+            <option value="male" ${user.gender==='male'?'selected':''}>ชาย</option>
+            <option value="female" ${user.gender==='female'?'selected':''}>หญิง</option>
+          </select>
+        </div>
+        <div class="field"><label>อายุ</label><input name="age" type="number" min="0" value="${user.age??''}"></div>
+        <div class="field"><label>วันเกิด</label><input name="birthday" type="date" value="${user.birthday||''}"></div>
+      </div>
+      <button class="btn secondary" type="submit">บันทึกข้อมูลส่วนตัว</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="section-label">สถิติร่างกาย (อัปเดตได้สัปดาห์ละ 1 ครั้ง +0.25 XP)</div>
+    <form id="statsForm">
+      <div class="grid3">
+        <div class="field"><label>น้ำหนัก (kg)</label><input name="weight" type="number" step="0.1" value="${user.weight??''}" ${canUpdate?'':'disabled'}></div>
+        <div class="field"><label>ส่วนสูง (cm)</label><input name="height" type="number" step="0.1" value="${user.height??''}" ${canUpdate?'':'disabled'}></div>
+        <div class="field"><label>% Fat</label><input name="bodyFat" type="number" step="0.1" value="${user.bodyFat??''}" ${canUpdate?'':'disabled'}></div>
+      </div>
+      <div class="row" style="gap:20px; margin:8px 0 14px;">
+        <div class="tag">BMI: ${bmi ?? '-'}</div>
+        <div class="tag">${bmiCategory(bmi)}</div>
+      </div>
+      <button class="btn secondary" type="submit" ${canUpdate?'':'disabled'}>${canUpdate?'อัปเดตสถิติ (+0.25 XP)':'อัปเดตไม่ได้ตอนนี้'}</button>
+      ${!canUpdate?`<div class="update-lock">${nextUpdateStr}</div>`:''}
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="section-label">ข้อมูลยิม</div>
+    <form id="gymForm">
+      <div class="grid3">
+        <div class="field"><label>ชื่อยิม</label><input name="gymName" value="${esc(user.gymName||'')}"></div>
+        <div class="field"><label>ราคา (บาท)</label><input name="gymPrice" value="${esc(user.gymPrice||'')}"></div>
+        <div class="field"><label>ระยะเวลา/ประเภท</label><input name="gymDuration" placeholder="เช่น รายเดือน, รายปี, ต่อครั้ง" value="${esc(user.gymDuration||'')}"></div>
+      </div>
+      <button class="btn secondary" type="submit">บันทึกข้อมูลยิม</button>
+    </form>
+  </div>`;
+}
+function bindProfile(user){
+  document.getElementById('personalForm').onsubmit=(e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    user.nickname = fd.get('nickname');
+    user.gender = fd.get('gender');
+    user.age = fd.get('age')? +fd.get('age') : null;
+    user.birthday = fd.get('birthday');
+    persistUser(user);
+    showToast('บันทึกข้อมูลส่วนตัวแล้ว');
+    render();
+  };
+  document.getElementById('statsForm').onsubmit=(e)=>{
+    e.preventDefault();
+    if(!canUpdateStats(user)) return;
+    const fd = new FormData(e.target);
+    applyStatsUpdate(user, {
+      weight: fd.get('weight')? +fd.get('weight') : user.weight,
+      height: fd.get('height')? +fd.get('height') : user.height,
+      bodyFat: fd.get('bodyFat')? +fd.get('bodyFat') : user.bodyFat,
+    });
+    persistUser(user);
+    showToast('อัปเดตสถิติแล้ว (+0.25 XP)');
+    render();
+  };
+  document.getElementById('gymForm').onsubmit=(e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    user.gymName = fd.get('gymName');
+    user.gymPrice = fd.get('gymPrice');
+    user.gymDuration = fd.get('gymDuration');
+    persistUser(user);
+    showToast('บันทึกข้อมูลยิมแล้ว');
+    render();
+  };
+}
+
+/* ---------- init ---------- */
+(function init(){
+  const uname = getSession();
+  if(uname){
+    const u = currentUser();
+    if(u){
+      const existing = u.logs[todayKey()];
+      state.logDraft = {date: todayKey(), entries: existing? existing.entries.map(x=>({...x})) : []};
+    }
+  }
+  render();
+})();
+</script>
+</body>
+</html>
